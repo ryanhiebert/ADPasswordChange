@@ -63,12 +63,7 @@ namespace ADPasswordChange
         {
             // Use the current comptuer's domain to contruct the LDAP connection string.
             string dnsdomain = IPGlobalProperties.GetIPGlobalProperties().DomainName;
-            List<string> parts = new List<string>();
-            foreach (string s in dnsdomain.Split('.'))
-            { 
-                parts.Add("dc=" + s);
-            }
-            string connectionString = "LDAP://" + dnsdomain + "/" + string.Join(",", parts);
+            string connectionString = "LDAP://" + dnsdomain + "/" + string.Join(",", dnsdomain.Split('.').Select(x => "dc=" + x));
 
             DirectoryEntry me = null;
 
