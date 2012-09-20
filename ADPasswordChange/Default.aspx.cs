@@ -62,8 +62,10 @@ namespace ADPasswordChange
         protected void ResetPassword(string username, string password, string newpassword)
         {
             // Use the current computer's domain to construct the LDAP connection string.
-            string dnsdomain = IPGlobalProperties.GetIPGlobalProperties().DomainName;
-            string connectionString = "LDAP://" + dnsdomain + "/" + string.Join(",", dnsdomain.Split('.').Select(x => "dc=" + x));
+            //string dnsdomain = IPGlobalProperties.GetIPGlobalProperties().DomainName;
+            //string connectionString = "LDAP://" + dnsdomain + "/" + string.Join(",", dnsdomain.Split('.').Select(x => "dc=" + x));
+
+            string connectionString = ConfigurationManager.ConnectionStrings["LDAPConnectionString"].ConnectionString;
 
             DirectoryEntry me = null;
 
