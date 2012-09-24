@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.DirectoryServices;
+using System.DirectoryServices.AccountManagement;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Web;
@@ -16,7 +16,6 @@ namespace ADPasswordChange
         {
             if (Page.IsPostBack)
             {
-                form.Visible = false;
                 status.Visible = true;
 
                 string username = Request.Form["loginname"];
@@ -24,72 +23,36 @@ namespace ADPasswordChange
                 string newpass = Request.Form["newpass"];
                 string confpass = Request.Form["confpass"];
 
-
-
-                try
+                if (confpass == newpass && oldpass != newpass && string.Empty != newpass)
                 {
-                    if (confpass.Equals(newpass) && !oldpass.Equals(newpass) && !string.Empty.Equals(newpass))
+                    string dnsdomain = ConfigurationManager.AppSettings["DomainName"];
+                    if (dnsdomain == null) { dnsdomain = IPGlobalProperties.GetIPGlobalProperties().DomainName; }
+
+                    string searchbase = ConfigurationManager.AppSettings["SearchBase"];
+                    if (searchbase == null) { searchbase = string.Join(",", dnsdomain.Split('.').Select(x => "dc=" + x)); }
+
+                    PrincipalContext context = new PrincipalContext(ContextType.Domain, dnsdomain, searchbase, username, oldpass);
+                    UserPrincipal user = UserPrincipal.FindByIdentity(context, IdentityType.SamAccountName, username);
+                    if (user == null) { user = UserPrincipal.FindByIdentity(context, IdentityType.UserPrincipalName, username); }
+                    if (user != null)
                     {
-                        ResetPassword(username, oldpass, newpass);
-                        msg.Text = "Your password was successfully changed.";
+                        user.ChangePassword(oldpass, newpass);
+                        msg.Text = "Password Changed Successfully!";
                     }
                     else
                     {
-                        msg.Text = "New Password invalid. It cannot be blank, or the same as your old password.";
+                        msg.Text = "Problem finding username.";
                     }
                 }
-                catch (ArgumentException)
+                else
                 {
-                    msg.Text = "Unknown Username.";
+                    msg.Text = "New Password invalid. It cannot be blank, or the same as your old password.";
                 }
-                catch (UnauthorizedAccessException)
-                {
-                    msg.Text = "Invalid Username or Password.";
-                }
-                catch (Exception)
-                {
-                    msg.Text = "Something went wrong. Please Try Again. If this persists, notify your Administrator.";
-                }
-
             }
             else
             {
-                form.Visible = true;
                 status.Visible = false;
             }
-        }
-
-        protected void ResetPassword(string username, string password, string newpassword)
-        {
-            // Use the current computer's domain to construct the LDAP connection string.
-            //string dnsdomain = IPGlobalProperties.GetIPGlobalProperties().DomainName;
-            //string connectionString = "LDAP://" + dnsdomain + "/" + string.Join(",", dnsdomain.Split('.').Select(x => "dc=" + x));
-
-            string connectionString = ConfigurationManager.ConnectionStrings["LDAPConnectionString"].ConnectionString;
-
-            DirectoryEntry me = null;
-
-            try
-            {
-                using (DirectoryEntry searchRoot = new DirectoryEntry(connectionString, username, password, AuthenticationTypes.Secure))
-                {
-                    using (DirectorySearcher ds = new DirectorySearcher(searchRoot, "(sAMAccountName=" + username + ")"))
-                    {
-                        SearchResult sr = ds.FindOne();
-                        if (sr != null)
-                            me = sr.GetDirectoryEntry();
-                        else
-                            throw new ArgumentException("Failed to find login name!");
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new UnauthorizedAccessException("Invalid username or password!");
-            }
-
-            me.Invoke("SetPassword", new object[] { newpassword });
-            me.CommitChanges();
         }
     }
 }

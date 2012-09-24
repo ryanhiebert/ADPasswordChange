@@ -7,7 +7,6 @@
     <title>Reset Your Password</title>
 </head>
 <body>
-    <asp:Label runat="server" ID="servername"></asp:Label>
     <asp:Panel ID="form" runat="server" Width="500px">
     <form id="form2" runat="server" action="" method="post">
     <div>
